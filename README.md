@@ -1,4 +1,4 @@
-# Break Points - Version Pre-Alpha
+# Break Points
 
 ## Program Functionality
 
