@@ -1,36 +1,188 @@
 # Break Points
 
-## Program Functionality
+Break Points is an R-based tool designed to identify cleavage targets of a specific endonuclease using RNA-seq data from knockout experiments. The program detects candidate cleavage sites (break points) by comparing 5′ and 3′ read-start profiles between control and mutant strains.
 
-The main purpose of this program is to identify specific targets of a given endonuclease based on RNA-seq data. For accurate results, your experiment should meet the following criteria:
+This tool is intended to complement the **frtc pipeline**, which processes raw RNA-seq data and generates the required `.bedgraph` profile files.
 
-1. The target molecule must be an endonuclease.
-2. The data must come from a knockout experiment.
-3. While not mandatory, it's advisable that your sequencing data be the result of a library that doesn't fragment RNA.
+---
 
-The Break Points algorithm scans through all positions of your sequencing data, compares read counts, identifies cleavage points (break points), and then compares the control strain with the mutant (lacking the target endonuclease) to determine if the break points are influenced by the knocked-out endonuclease.
+## 📌 Table of Contents
 
-A **break point** is defined as a position in the genome where there is a high read count (minimum 10) in the 5' profile data, followed by, within a maximum interval of 3 base pairs, a high read count position in the 3' profile, indicating a cleavage point. The algorithm also performs this analysis backward, from the 3' profile to the 5' profile, but this information is irrelevant for single-end data.
+- [Overview](#overview)
+- [Experimental Requirements](#experimental-requirements)
+- [Algorithm Description](#algorithm-description)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Input Files](#input-files)
+- [Output](#output)
+- [Recommended Workflow](#recommended-workflow)
+- [Citation](#citation)
+- [Contact](#contact)
 
-This program complements the [frtc pipeline](https://github.com/alanlorenzetti/frtc), which processes raw RNA-seq data. Break Points is designed to receive bedgraph profile files as input, indicating counts in starting and ending read positions for a given transcript segment.
+---
 
-If the break point position has a log2 fold change = 1 difference, with the control strain having more read counts than the mutant, the program adds the position as influenced by the target endonuclease.
+## Overview
+
+Break Points identifies endonuclease-dependent RNA cleavage sites by:
+
+1. Detecting genomic positions with characteristic 5′ and 3′ read accumulation.
+2. Comparing signal intensity between control and knockout strains.
+3. Reporting sites with significant differential cleavage signatures.
+
+The method is specifically designed for detecting direct cleavage events caused by an endonuclease.
+
+---
+
+## Experimental Requirements
+
+For reliable results:
+
+- The target molecule **must be an endonuclease**.
+- The RNA-seq data **must originate from a knockout experiment**.
+- It is strongly recommended that the RNA-seq library preparation **does not fragment RNA**, as fragmentation may obscure cleavage signals.
+
+---
+
+## Algorithm Description
+
+### Break Point Definition
+
+A genomic position is classified as a **break point** if:
+
+- A position in the **5′ profile** has a read count ≥ 10, and  
+- Within a maximum interval of **3 base pairs**, a position in the **3′ profile** also has a read count ≥ 10.
+
+This pattern indicates a potential RNA cleavage site.
+
+The algorithm also performs reciprocal analysis (3′ → 5′), which is not relevant for single-end sequencing data.
+
+---
+
+### Differential Analysis
+
+After identifying candidate break points, the program compares control and mutant strains.
+
+A break point is considered **endonuclease-influenced** if:
+
+- `log2 fold change ≥ 1`, and  
+- The control strain shows higher read counts than the mutant strain.
+
+These positions are reported as enzyme-dependent cleavage sites.
+
+---
+
+## Installation
+
+### Requirements
+
+- R (version ≥ 4.0 recommended)
+- Linux or Unix-like operating system
+
+Clone the repository:
+
+```bash
+git clone https://github.com/<your-username>/break-points.git
+cd break-points
+```
+
+Ensure that `Rscript` is available in your system path:
+
+```bash
+Rscript --version
+```
+
+---
 
 ## Usage
 
-This program requires the R environment to be installed for proper functioning.
-
-To use the program, open the Linux command line, and input the following command with 8 arguments, one of which is optional:
+Run from the command line:
 
 ```bash
-R brk.R <Control Strain 5' profile> <Mutant Strain 5' profile> <Control Strain 3' profile> <Mutant Strain 3' profile> <Control Coverage> <Mutant Coverage> <Chromosome> <Output Name>
+Rscript brk.R <Control_5prime.bedgraph> \
+              <Mutant_5prime.bedgraph> \
+              <Control_3prime.bedgraph> \
+              <Mutant_3prime.bedgraph> \
+              <Control_Coverage.bedgraph> \
+              <Mutant_Coverage.bedgraph> \
+              <Chromosome> \
+              <Output_Name>
 ```
 
-The first 6 arguments refer to the .bedgraph files generated by the frtc pipeline. The Chromosome argument specifies the chosen chromosome, and the Output Name argument is optional, allowing you to change the name of the output files. If not set, the files will be named "out".
+### Arguments
 
-It's recommended to save the variables in the command line before using brk.R for cleanliness.
+| Argument | Description |
+|----------|------------|
+| 1 | Control strain – 5′ profile (.bedgraph) |
+| 2 | Mutant strain – 5′ profile (.bedgraph) |
+| 3 | Control strain – 3′ profile (.bedgraph) |
+| 4 | Mutant strain – 3′ profile (.bedgraph) |
+| 5 | Control coverage (.bedgraph) |
+| 6 | Mutant coverage (.bedgraph) |
+| 7 | Chromosome identifier |
+| 8 | Output prefix (optional, default = `out`) |
 
-Break Points will create two folders: "Raw_Tables" (containing main tables with data information) and "Bedgraph_Version" (containing bedgraph tables ready to use in Integrative Genome Browser - IGV).
+It is recommended to assign file paths to shell variables before execution for clarity.
 
-## Further Information
-Contact me via email, jpfacio@usp.br, if you have any questions or have used Break Points in your work.
+---
+
+## Input Files
+
+The program requires `.bedgraph` files generated by the **frtc pipeline**, including:
+
+- 5′ read-start profiles
+- 3′ read-end profiles
+- Coverage profiles
+
+Each file must correspond to the same genome assembly and chromosome.
+
+---
+
+## Output
+
+The program generates two directories:
+
+### `Raw_Tables/`
+
+Contains tabular data with:
+
+- Identified break points
+- Read counts
+- Fold changes
+- Associated metadata
+
+### `Bedgraph_Version/`
+
+Contains bedgraph-formatted files ready for visualization in genome browsers such as:
+
+- IGV (Integrative Genomics Viewer)
+
+---
+
+## Recommended Workflow
+
+1. Process raw RNA-seq data using the **frtc pipeline**.
+2. Generate 5′, 3′, and coverage `.bedgraph` files.
+3. Run Break Points.
+4. Visualize identified cleavage sites in IGV.
+5. Perform downstream validation and biological interpretation.
+
+---
+
+## Citation
+
+If you use Break Points in your research, please cite:
+
+```
+Facio Almeida, J.P. Break Points: Identification of endonuclease-dependent RNA cleavage sites from RNA-seq knockout data.
+```
+
+(Please update with DOI or publication details if available.)
+
+---
+
+## Contact
+
+**João Paulo Facio Almeida**  
+Email: jpfacio@usp.br  
+
+For questions, bug reports, or collaboration inquiries, please open an issue in this repository or contact directly via email.
