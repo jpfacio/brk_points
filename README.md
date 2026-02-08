@@ -2,7 +2,7 @@
 
 ## Program Functionality
 
-The main purpose of this pre-alpha version of the program is to identify specific targets of a given endonuclease based on RNA-seq data. For accurate results, your experiment should meet the following criteria:
+The main purpose of this program is to identify specific targets of a given endonuclease based on RNA-seq data. For accurate results, your experiment should meet the following criteria:
 
 1. The target molecule must be an endonuclease.
 2. The data must come from a knockout experiment.
